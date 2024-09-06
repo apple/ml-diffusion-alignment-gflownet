@@ -1,0 +1,81 @@
+parameters:
+  save_freq: 10
+  num_checkpoint_limit: 5
+  mixed_precision: "bf16"
+  allow_tf32: True
+  # whether or not to use LoRA. LoRA reduces memory usage significantly by injecting small weight matrices into the
+  # attention layers of the UNet. with LoRA, fp16, and a batch size of 1, finetuning Stable Diffusion should take
+  # about 10GB of GPU memory. beware that if LoRA is disabled, training will take a lot of memory and saved checkpoint
+  # files will also be large.
+  use_lora: True
+
+  pretrained:
+    model: "runwayml/stable-diffusion-v1-5"
+#    model: "CompVis/stable-diffusion-v1-4" # similar to v1.5
+    revision: "main"
+
+  sample:
+    num_steps: 50
+    # eta parameter for the DDIM sampler. this controls the amount of noise injected into the sampling process, with 0.0
+    # being fully deterministic and 1.0 being equivalent to the DDPM sampler.
+    eta: 1.0
+    guidance_scale: 5.0
+    # batch size (per GPU!) to use for sampling.
+    # number of batches to sample per epoch. the total number of samples per epoch is `num_batches_per_epoch *
+    # batch_size * num_gpus`.
+    batch_size: 16
+    num_batches_per_epoch: 4
+
+  train:
+    # whether to use the 8bit Adam optimizer from bitsandbytes.
+    use_8bit_adam: False
+    learning_rate: 3.0e-4
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_weight_decay: 1.0e-4
+    adam_epsilon: 1.e-8
+    max_grad_norm: 1.0
+    # number of inner epochs per outer epoch. each inner epoch is one iteration through the data collected during one
+    # outer epoch's round of sampling.
+    num_inner_epochs: 1
+    # whether or not to use classifier-free guidance during training. if enabled, the same guidance scale used during
+    # sampling will be used during training.
+    cfg: True
+    # clip advantages to the range [-adv_clip_max, adv_clip_max].
+    adv_clip_max: 5
+    # the PPO clip range.
+    clip_range: 1.e-4
+    # the fraction of timesteps to train on. if set to less than 1.0, the model will be trained on a subset of the
+    # timesteps for each sample. this will speed up training but reduce the accuracy of policy gradient estimates.
+    timestep_fraction: 1.0  # does not affect GPU memory occupation
+    lora_rank: 4
+
+    batch_size: 8 # 8 (fp16) or 4 (fp32) -> 60000 MB GPU memory
+    gradient_accumulation_steps: 4
+
+    ########### for GFN
+    reward_exp: 1.0e+2
+    flow_learning_rate: 3.0e-4
+    anneal: linear
+    unetreg: 1.0e+0
+    # whether to use GFN-DB with REINFORCE gradient
+    klpf: -1.
+
+  seed: 0
+  num_epochs: 100
+  wandb: False
+
+#  prompt_fn: "simple_animals" # for aesthetic_score
+#  prompt_fn: "imagenet_all" # for compression
+  prompt_fn: "drawbench"   # for imagereward
+#  prompt_fn: "hpd" # for HPSv2
+#  prompt_fn: "hpd_photo" # for HPSv2
+#  prompt_fn: "hpd_photo_painting" # for HPSv2
+#  prompt_fn: "hpd_photo_anime" # for HPSv2
+#  prompt_fn: "hpd_photo_concept" # for HPSv2
+
+#  reward_fn: "aesthetic_score"
+#  reward_fn: "jpeg_compressibility"
+#  reward_fn: "jpeg_incompressibility"
+  reward_fn: "imagereward"
+  prompt_fn_kwargs: { }
